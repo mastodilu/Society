@@ -23,8 +23,11 @@ char * child_name;
 char * child_genome;
 char * child_sem; //contain name of semaphore 1
 char * child_sem2;//contain name of semaphore 2
+char * child_msgq_a; //contain name of message queue
 int sem_init_people; //semaphore that stops parent process and makes it wait for init_people children
 int sem_init_people2; //semaphore that tells init_people children to start living
+struct msqid_ds msq; //struct associated with msg queue
+int msgq_a; //id of message queue to share info for processes of type A
 
 int main(int argc, char * argv[])
 {
@@ -40,7 +43,7 @@ int main(int argc, char * argv[])
 	init_people = generate_first_people((unsigned int)2, (unsigned int)MAX_PEOPLE);
     printf("init_people %d\n", init_people);
 
-    //create semaphores to allow children to start living
+    //create 2 semaphores to allow children to start living
 	sem_init_people = semget(IPC_PRIVATE, 1, 0666|IPC_CREAT|IPC_EXCL);
 	if( sem_init_people == -1 ){
 		if(errno == EEXIST){ //delete semaphores if exist
@@ -60,7 +63,21 @@ int main(int argc, char * argv[])
 	}
 
     printf("sem1:%d sem2:%d\n", sem_init_people, sem_init_people2);
-    
+
+    //create message queue
+	msgq_a = msgget(IPC_PRIVATE, 0666|IPC_CREAT|IPC_EXCL);//try to crete msg queue and return error if already exist
+	if(msgq_a == -1){
+		if( errno == EEXIST ){//if exists
+			// delete message queue
+			if( msgctl(msgq_a, IPC_RMID, &msq) == -1 )
+				perror("rmid");
+        }else
+			perror("msgget queue A");
+		exit(EXIT_FAILURE);
+	}
+    printf("msgq:%d\n", msgq_a);
+
+    //create children
     for(i = 0; i < init_people; i++){
         
         person = create_person();
@@ -83,10 +100,11 @@ int main(int argc, char * argv[])
 void person_params(struct person person)
 {
     int i = 0;
-    child_sem = (char*)calloc(SIZE_NUMBER, sizeof(char));
-    child_sem2 = (char*)calloc(SIZE_NUMBER, sizeof(char));
+    child_sem = calloc(SIZE_NUMBER, sizeof(char));
+    child_sem2 = calloc(SIZE_NUMBER, sizeof(char));
     child_name = calloc(SIZE_NUMBER, sizeof(char));
     child_genome = calloc(SIZE_NUMBER, sizeof(char));
+    child_msgq_a = calloc(SIZE_NUMBER, sizeof(char));
 
     if(child_name == NULL)
         errExit("child_name NULL");
@@ -96,6 +114,8 @@ void person_params(struct person person)
         errExit("child_sem NULL");
     if(child_sem2 == NULL)
         errExit("child_sem2 NULL");
+    if(child_msgq_a == NULL)
+        errExit("child_msgq_a NULL");
     
     //TYPE
     if(person.type == 'A')
@@ -123,6 +143,14 @@ void person_params(struct person person)
         errExit("child_sem2 sprintf");
     args[i++] = child_sem2;
 
+    //MESSAGE QUEUE
+    if( sprintf(child_msgq_a, "%d", msgq_a) < 0 )
+        errExit("child_msgq_a sprintf");
+    args[i++] = child_msgq_a;
+
     free(child_name);
     free(child_genome);
+    free(child_sem);
+    free(child_sem2);
+    free(child_msgq_a);
 }
