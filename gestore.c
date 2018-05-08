@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #include "header.h"
@@ -28,6 +29,7 @@ int sem_init_people; //semaphore that stops parent process and makes it wait for
 int sem_init_people2; //semaphore that tells init_people children to start living
 struct msqid_ds msq; //struct associated with msg queue
 int msgq_a; //id of message queue to share info for processes of type A
+pid_t * initial_children;//will contain pids of every child
 
 int main(int argc, char * argv[])
 {
@@ -35,6 +37,7 @@ int main(int argc, char * argv[])
     init_people = 0;
     time_t t;//for srand
     struct person person;
+    pid_t child = 0;
 
     //initialize random number generator
     srand((unsigned) time(&t));
@@ -42,6 +45,10 @@ int main(int argc, char * argv[])
     //assign a value to init_people
 	init_people = generate_first_people((unsigned int)2, (unsigned int)MAX_PEOPLE);
     printf("init_people %d\n", init_people);
+
+    initial_children = calloc(init_people, sizeof(pid_t));
+    if(initial_children == NULL)
+        errExit("initial_children NULL");
 
     //create 2 semaphores to allow children to start living
 	sem_init_people = semget(IPC_PRIVATE, 1, 0666|IPC_CREAT|IPC_EXCL);
@@ -77,6 +84,12 @@ int main(int argc, char * argv[])
 	}
     printf("msgq:%d\n", msgq_a);
 
+    //RWX permissions for people processes
+	if( chmod("./a", 0777) != 0 )
+		errExit("chmod person A");
+	if( chmod("./b", 0777) != 0 )
+		errExit("chmod person B");
+
     //create children
     for(i = 0; i < init_people; i++){
         
@@ -86,9 +99,29 @@ int main(int argc, char * argv[])
         //set parameters for execve
         person_params(person);
         
+        switch( child = fork() ){
+            
+            case -1:{
+                errExit("fork error");
+            }
+
+            case 0:{//child
+                    if( execve(args[0], args, envs) == -1 ){
+                        perror("gestore execve");
+                    }
+
+                    //we're here if execve didnt't work
+                    exit(EXIT_FAILURE);
+                break;
+            }
+            default:{//father
+                //add every child in the array of children
+				initial_children[i] = child;
+            }
+        }
     }
 
-    //TODO delete semaphores and queues
+    //delete semaphores and queues
 
     if( msgctl(msgq_a, IPC_RMID, &msq) != 0 )
         perror("gestore main_msg_queue RMID");
@@ -128,9 +161,9 @@ void person_params(struct person person)
     
     //TYPE
     if(person.type == 'A')
-        args[i++] = "./A";
+        args[i++] = "./a";
     else
-        args[i++] = "./B";
+        args[i++] = "./b";
     
     //NAME
     if( sprintf(child_name, "%d", person.name) < 0 )
