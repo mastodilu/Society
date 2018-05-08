@@ -89,6 +89,9 @@ int main(int argc, char * argv[])
     }
 
     //TODO delete semaphores and queues
+    //delete message queue
+    if( msgctl(msgq_a, IPC_RMID, &msq) != 0 )
+        errExit("gestore main_msg_queue RMID");
 
     return EXIT_SUCCESS;
 }
