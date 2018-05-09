@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include "header.h"
 
+
+void print_rcvd_msg(struct mymsg msg);
+void print_sent_msg(struct mymsg msg);
+
+
 struct msqid_ds msq;
 int love_msg_queue; //id of private message queue used to meet people
 
@@ -19,6 +24,7 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
+    struct mymsg msg_in;
 
     
     //tell parent you're ready to live
@@ -32,7 +38,46 @@ int main(int argc, char* argv[])
 
     printf("%c name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
         myself.type, myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
+    
+
+    //read message from queue
+    if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
+        errExit("msgrcv");
+    print_rcvd_msg(msg_in);
+
         
     pause();
     return EXIT_SUCCESS;
+}
+
+
+/*
+ * print received message
+ */
+void print_rcvd_msg(struct mymsg msg)
+{
+    printf("B received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+        msg.mtype,
+        (int)msg.mtxt.pid,
+        msg.mtxt.type,
+        msg.mtxt.name,
+        msg.mtxt.genome,
+        msg.mtxt.key_of_love,
+        (int)msg.mtxt.partner );
+}
+
+
+/*
+ * print sent message
+ */
+void print_sent_msg(struct mymsg msg)
+{
+    printf("B sent mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d]\n",
+        msg.mtype,
+        (int)msg.mtxt.pid,
+        msg.mtxt.type,
+        msg.mtxt.name,
+        msg.mtxt.genome,
+        msg.mtxt.key_of_love,
+        (int)msg.mtxt.partner );
 }

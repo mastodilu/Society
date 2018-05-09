@@ -8,6 +8,9 @@
 
 #include "header.h"
 
+void print_rcvd_msg(struct mymsg msg);
+void print_sent_msg(struct mymsg msg);
+
 struct msqid_ds msq;
 int love_msg_queue; //id of private message queue used to meet people
 
@@ -70,4 +73,36 @@ int main(int argc, char* argv[])
     
     pause();
     return EXIT_SUCCESS;
+}
+
+
+/*
+ * print received message
+ */
+void print_rcvd_msg(struct mymsg msg)
+{
+    printf("A received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+        msg.mtype,
+        (int)msg.mtxt.pid,
+        msg.mtxt.type,
+        msg.mtxt.name,
+        msg.mtxt.genome,
+        msg.mtxt.key_of_love,
+        (int)msg.mtxt.partner );
+}
+
+
+/*
+ * print sent message
+ */
+void print_sent_msg(struct mymsg msg)
+{
+    printf("A sent mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d]\n",
+        msg.mtype,
+        (int)msg.mtxt.pid,
+        msg.mtxt.type,
+        msg.mtxt.name,
+        msg.mtxt.genome,
+        msg.mtxt.key_of_love,
+        (int)msg.mtxt.partner );
 }
