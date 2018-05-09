@@ -6,6 +6,7 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include "header.h"
 
@@ -135,9 +136,7 @@ int main(void)
 		if( reserveSem(sem_init_people, 0) != 0 )
 			errExit("reserveSem sem_init_people");
 	}
-
-    sleep(5);
-	
+    	
 	//allow every child to start by releasing the second semaphore
 	for(i = 0; i < init_people + 1; i++){
 		if( releaseSem(sem_init_people2, 0) != 0 )
@@ -145,9 +144,11 @@ int main(void)
 	}
 
 
+    sleep(5); //allow children to start
+    //TODO end children with signals then terminate
+
 
     //delete semaphores and queues
-
     if( msgctl(msgq_a, IPC_RMID, &msq) != 0 )
         perror("gestore main_msg_queue RMID");
 

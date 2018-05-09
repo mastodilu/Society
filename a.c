@@ -1,5 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+
 #include "header.h"
 
 struct msqid_ds msq;
@@ -19,6 +25,7 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
+    struct mymsg welcome;
 
         
     //tell parent you're ready to live
@@ -32,6 +39,22 @@ int main(int argc, char* argv[])
 
     printf("%c name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
         myself.type, myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
+
+
+    //create message to introduce A to others
+    welcome.mtype = (long)myself.genome;
+    welcome.mtxt.pid = (int)getpid();
+    welcome.mtxt.type = 'A';
+    welcome.mtxt.name = myself.name;
+    welcome.mtxt.genome = myself.genome;
+    welcome.mtxt.key_of_love = -1;
+    welcome.mtxt.partner = -1;
+
+    if( msgsnd(msgq, &welcome, sizeof(welcome), 0) == -1 ){
+        if( errno == EINTR)	perror("A-welcome caught a signal and failed msgsnd");
+		else     			perror("A-welcome msgsnd"); 
+		exit(EXIT_FAILURE);
+    }
     
     return EXIT_SUCCESS;
 }

@@ -9,10 +9,10 @@
 
 
 union semun {
-    int              val;
+    int val;
     struct semid_ds *buf;
-    unsigned short  *array;
-    struct seminfo  *__buf;
+    unsigned short *array;
+    struct seminfo *__buf;
 };
 
 struct person{
