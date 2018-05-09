@@ -19,7 +19,7 @@ void person_params(struct person);
 
 unsigned int init_people;
 char * args[8];
-char * envs[1];
+char * envs[] = {NULL};
 char * child_name;
 char * child_genome;
 char * child_sem; //contain name of semaphore 1
@@ -31,13 +31,20 @@ struct msqid_ds msq; //struct associated with msg queue
 int msgq_a; //id of message queue to share info for processes of type A
 pid_t * initial_children;//will contain pids of every child
 
-int main(int argc, char * argv[])
+//int main(int argc, char * argv[])
+int main(void)
 {
     unsigned int i = 0;
     init_people = 0;
     time_t t;//for srand
     struct person person;
     pid_t child = 0;
+
+    child_sem = calloc(SIZE_NUMBER, sizeof(char));
+    child_sem2 = calloc(SIZE_NUMBER, sizeof(char));
+    child_name = calloc(SIZE_NUMBER, sizeof(char));
+    child_genome = calloc(SIZE_NUMBER, sizeof(char));
+    child_msgq_a = calloc(SIZE_NUMBER, sizeof(char));
 
     //initialize random number generator
     srand((unsigned) time(&t));
@@ -84,6 +91,7 @@ int main(int argc, char * argv[])
 	}
     printf("msgq:%d\n", msgq_a);
 
+
     //RWX permissions for people processes
 	if( chmod("./a", 0777) != 0 )
 		errExit("chmod person A");
@@ -94,7 +102,6 @@ int main(int argc, char * argv[])
     for(i = 0; i < init_people; i++){
         
         person = create_person();
-        print_person(person);
 
         //set parameters for execve
         person_params(person);
@@ -117,9 +124,27 @@ int main(int argc, char * argv[])
             default:{//father
                 //add every child in the array of children
 				initial_children[i] = child;
+                print_person(person);
             }
-        }
-    }
+        }//-switch
+    }//-for
+
+
+	//wait for every child to be ready to start
+	for(i = 0; i < init_people; i++){
+		if( reserveSem(sem_init_people, 0) != 0 )
+			errExit("reserveSem sem_init_people");
+	}
+
+    sleep(5);
+	
+	//allow every child to start by releasing the second semaphore
+	for(i = 0; i < init_people + 1; i++){
+		if( releaseSem(sem_init_people2, 0) != 0 )
+			errExit("releaseSem sem_init_people2");
+	}
+
+
 
     //delete semaphores and queues
 
@@ -132,6 +157,13 @@ int main(int argc, char * argv[])
 	if( semctl(sem_init_people2, 0, IPC_RMID, NULL) == -1 )
 		perror("remove sem_init_people2");
 
+    //free memory
+    free(child_name);
+    free(child_genome);
+    free(child_sem);
+    free(child_sem2);
+    free(child_msgq_a);
+
     return EXIT_SUCCESS;
 }
 
@@ -141,13 +173,6 @@ int main(int argc, char * argv[])
  */
 void person_params(struct person person)
 {
-    int i = 0;
-    child_sem = calloc(SIZE_NUMBER, sizeof(char));
-    child_sem2 = calloc(SIZE_NUMBER, sizeof(char));
-    child_name = calloc(SIZE_NUMBER, sizeof(char));
-    child_genome = calloc(SIZE_NUMBER, sizeof(char));
-    child_msgq_a = calloc(SIZE_NUMBER, sizeof(char));
-
     if(child_name == NULL)
         errExit("child_name NULL");
     if(child_genome == NULL)
@@ -159,40 +184,39 @@ void person_params(struct person person)
     if(child_msgq_a == NULL)
         errExit("child_msgq_a NULL");
     
-    //TYPE
-    if(person.type == 'A')
-        args[i++] = "./a";
-    else
-        args[i++] = "./b";
+    //CMD and TYPE
+    if(person.type == 'A'){
+        args[0] = "./a";
+        args[1] = "A";
+    }else{
+        args[0] = "./b";
+        args[1] = "B";
+    }
     
     //NAME
     if( sprintf(child_name, "%d", person.name) < 0 )
         errExit("child_name sprintf");
-    args[i++] = child_name;
+    args[2] = child_name;
     
     //GENOME
     if( sprintf(child_genome, "%lu", person.genome) < 0 )
         errExit("child_genome sprintf");
-    args[i++] = child_genome;
+    args[3] = child_genome;
 
     //SEMAPHORE 1
     if( sprintf(child_sem, "%d", sem_init_people) < 0 )
         errExit("child_sem sprintf");
-    args[i++] = child_sem;
+    args[4] = child_sem;
 
     //SEMAPHORE 2
     if( sprintf(child_sem2, "%d", sem_init_people2) < 0 )
         errExit("child_sem2 sprintf");
-    args[i++] = child_sem2;
+    args[5] = child_sem2;
 
     //MESSAGE QUEUE
     if( sprintf(child_msgq_a, "%d", msgq_a) < 0 )
         errExit("child_msgq_a sprintf");
-    args[i++] = child_msgq_a;
+    args[6] = child_msgq_a;
 
-    free(child_name);
-    free(child_genome);
-    free(child_sem);
-    free(child_sem2);
-    free(child_msgq_a);
+    //args[7] = "\0";
 }

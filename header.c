@@ -31,7 +31,7 @@ struct person create_person()
         person.type = 'A';
     }
     
-    person.name = 65 + rand()%27;
+    person.name = 65 + rand()%26;
     person.genome = 2 + ((unsigned long)(rand())%(GENES+2));
 
     return person;
