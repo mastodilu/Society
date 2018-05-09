@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
 #include <errno.h>
+#include <signal.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/stat.h>
@@ -16,6 +18,15 @@
 
 #define SIZE_NUMBER 15
 
+#ifndef SIM_TIME
+#define SIM_TIME 20
+#endif
+
+
+void handle_signal(int);
+void remove_all();
+void terminate_children();
+void free_all();
 void person_params(struct person);
 
 unsigned int init_people;
@@ -31,6 +42,8 @@ int sem_init_people2; //semaphore that tells init_people children to start livin
 struct msqid_ds msq; //struct associated with msg queue
 int msgq_a; //id of message queue to share info for processes of type A
 pid_t * initial_children;//will contain pids of every child
+struct sigaction sa;
+sigset_t my_mask;
 
 //int main(int argc, char * argv[])
 int main(void)
@@ -46,6 +59,13 @@ int main(void)
     child_name = calloc(SIZE_NUMBER, sizeof(char));
     child_genome = calloc(SIZE_NUMBER, sizeof(char));
     child_msgq_a = calloc(SIZE_NUMBER, sizeof(char));
+
+    //handle signals
+	sa.sa_handler = &handle_signal;
+	sa.sa_flags = 0; //No special behaviour
+	sigemptyset(&my_mask); //empty mask, do not ignore any signal
+	sigaction(SIGALRM, &sa, NULL);
+	sigaction(SIGUSR1, &sa, NULL);
 
     //initialize random number generator
     srand((unsigned) time(&t));
@@ -143,27 +163,10 @@ int main(void)
 			errExit("releaseSem sem_init_people2");
 	}
 
+    //shut system down after N seconds
+	alarm(SIM_TIME); //30 seconds
 
-    sleep(5); //allow children to start
-    //TODO end children with signals then terminate
-
-
-    //delete semaphores and queues
-    if( msgctl(msgq_a, IPC_RMID, &msq) != 0 )
-        perror("gestore main_msg_queue RMID");
-
-    if( semctl(sem_init_people, 0, IPC_RMID, NULL) == -1 )
-		perror("remove sem_init_people");
-
-	if( semctl(sem_init_people2, 0, IPC_RMID, NULL) == -1 )
-		perror("remove sem_init_people2");
-
-    //free memory
-    free(child_name);
-    free(child_genome);
-    free(child_sem);
-    free(child_sem2);
-    free(child_msgq_a);
+    pause();
 
     return EXIT_SUCCESS;
 }
@@ -220,4 +223,73 @@ void person_params(struct person person)
     args[6] = child_msgq_a;
 
     //args[7] = "\0";
+}
+
+
+/*
+ * handle signals
+ */
+void handle_signal(int signum)
+{
+    switch(signum){
+
+        case SIGALRM:{ //terminate children and program
+            
+            terminate_children();
+            remove_all();
+			free_all();
+			//TODO print_stats();
+			
+            exit(EXIT_SUCCESS);
+            break;
+        }
+
+        default:{
+            printf("parent default signal\n");
+        }
+    }//-switch
+}
+
+
+/*
+ * delete semaphores and queues
+ */
+void remove_all()
+{
+    if( msgctl(msgq_a, IPC_RMID, &msq) != 0 )
+        perror("gestore main_msg_queue RMID");
+
+    if( semctl(sem_init_people, 0, IPC_RMID, NULL) == -1 )
+		perror("remove sem_init_people");
+
+	if( semctl(sem_init_people2, 0, IPC_RMID, NULL) == -1 )
+		perror("remove sem_init_people2");
+}
+
+
+//free allocated memory
+void free_all()
+{
+    free(child_name);
+    free(child_genome);
+    free(child_sem);
+    free(child_sem2);
+    free(child_msgq_a);
+}
+
+
+/*
+ * terminate every children
+ */
+void terminate_children()
+{
+	unsigned int i = 0;
+
+	for(i = 0; i < init_people; i++){
+		if( kill(initial_children[i], 0) == 0 ){
+			if( kill(initial_children[i], SIGTERM) == -1 ){
+				perror("kill sigterm to child");
+			}
+		}
+	}
 }

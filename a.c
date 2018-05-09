@@ -56,5 +56,6 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
     }
     
+    pause();
     return EXIT_SUCCESS;
 }

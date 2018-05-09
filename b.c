@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
 
     printf("%c name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
         myself.type, myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
-    
+        
+    pause();
     return EXIT_SUCCESS;
 }
