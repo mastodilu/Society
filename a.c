@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
-    struct mymsg welcome;
+    struct mymsg welcome, love_letter;
 
         
     //tell parent you're ready to live
@@ -70,7 +70,14 @@ int main(int argc, char* argv[])
 		else     			perror("A-welcome msgsnd"); 
 		exit(EXIT_FAILURE);
     }
-    
+
+
+    //read love_letter from B
+    if( msgrcv(love_msg_queue, &love_letter, sizeof(love_letter), 0, 0) == -1 )
+        errExit("A msgrcv love_letter from B");
+    print_rcvd_msg(love_letter);
+
+
     pause();
     return EXIT_SUCCESS;
 }

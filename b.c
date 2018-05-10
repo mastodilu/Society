@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
-    struct mymsg msg_in;
+    struct mymsg msg_in, love_letter;
 
     
     //tell parent you're ready to live
@@ -44,6 +44,21 @@ int main(int argc, char* argv[])
     if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
         errExit("msgrcv");
     print_rcvd_msg(msg_in);
+
+
+    //send love_letter to A
+    love_letter.mtype = (long)getpid();
+    love_letter.mtxt.pid = (int)getpid();
+    love_letter.mtxt.type = 'B';
+    love_letter.mtxt.name = myself.name;
+    love_letter.mtxt.genome = myself.genome;
+    love_letter.mtxt.key_of_love = -1;
+    love_letter.mtxt.partner = -1;
+    
+    if( msgsnd(msg_in.mtxt.key_of_love, &love_letter, sizeof(love_letter), 0) == -1 )
+        errExit("B msgsnd love_letter to A");
+    print_sent_msg(love_letter);
+    
 
         
     pause();
