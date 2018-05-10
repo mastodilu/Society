@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include "header.h"
 
 
@@ -24,7 +25,8 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
-    struct mymsg msg_in, love_letter;
+    struct mymsg msg_in, love_letter, response;
+    int queue_of_love, engaged = -1;
 
     
     //tell parent you're ready to live
@@ -40,25 +42,58 @@ int main(int argc, char* argv[])
         myself.type, myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
     
 
-    //read message from queue
-    if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
-        errExit("msgrcv");
-    print_rcvd_msg(msg_in);
+    while(engaged != 0){
+
+        //read first message from queue with mtype < OFFSET
+        if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
+            errExit("msgrcv");
+        print_rcvd_msg(msg_in);
 
 
-    //send love_letter to A
-    love_letter.mtype = (long)getpid();
-    love_letter.mtxt.pid = (int)getpid();
-    love_letter.mtxt.type = 'B';
-    love_letter.mtxt.name = myself.name;
-    love_letter.mtxt.genome = myself.genome;
-    love_letter.mtxt.key_of_love = -1;
-    love_letter.mtxt.partner = -1;
-    
-    if( msgsnd(msg_in.mtxt.key_of_love, &love_letter, sizeof(love_letter), 0) == -1 )
-        errExit("B msgsnd love_letter to A");
-    print_sent_msg(love_letter);
-    
+        queue_of_love = msg_in.mtxt.key_of_love;
+
+
+        //send love_letter to A
+        love_letter.mtype = getpid();
+        love_letter.mtxt.pid = getpid();
+        love_letter.mtxt.type = 'B';
+        love_letter.mtxt.name = myself.name;
+        love_letter.mtxt.genome = myself.genome;
+        love_letter.mtxt.key_of_love = -1;
+        love_letter.mtxt.partner = 0;
+        
+#if 0
+        if( msgsnd(queue_of_love, &love_letter, sizeof(love_letter), 0) == -1 )
+            errExit("B msgsnd love_letter to A");
+        print_sent_msg(love_letter);
+#else
+        if( msgsnd(queue_of_love, &love_letter, sizeof(love_letter), 0) == -1 ){
+            if(errno == EACCES)         printf("B msgsnd EACCESS\n");
+            else if(errno == EAGAIN)    printf("B msgsnd EAGAIN\n");
+            else if(errno == EFAULT)    printf("B msgsnd EFAULT\n");
+            else if(errno == EIDRM)     printf("B msgsnd EIDRM\n");
+            else if(errno == EINTR)     printf("B msgsnd EINTR\n");
+            else if(errno == EINVAL)    printf("B msgsnd EINVAL id:%d\n", queue_of_love);
+            else if(errno == ENOMEM)    printf("B msgsnd ENOMEN\n");
+        }
+        print_sent_msg(love_letter);
+#endif
+
+
+        printf("B key:%d\n", queue_of_love);
+
+
+        //receive response from A
+        if( msgrcv(queue_of_love, &response, sizeof(response), 0, 0) < 1 ){
+            if( errno == ENOMSG )       errExit("B msgrcv response ENOMSG");
+            else                        errExit("B msgrcv");
+        }
+        printf("B after msgrcv\n");
+        print_rcvd_msg(response);
+
+
+        engaged = response.mtxt.key_of_love;//exit while or loop again
+    }
 
         
     pause();

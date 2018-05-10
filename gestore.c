@@ -22,6 +22,10 @@
 #define SIM_TIME 20
 #endif
 
+#ifndef BIRTH_DEATH
+#define BIRTH_DEATH 5
+#endif
+
 
 void handle_signal(int);
 void remove_all();
@@ -71,7 +75,11 @@ int main(void)
     srand((unsigned) time(&t));
 
     //assign a value to init_people
+#if 1
 	init_people = generate_first_people((unsigned int)2, (unsigned int)MAX_PEOPLE);
+#else
+    init_people = 2;
+#endif
     printf("init_people %d\n", init_people);
 
     initial_children = calloc(init_people, sizeof(pid_t));
@@ -123,6 +131,10 @@ int main(void)
     for(i = 0; i < init_people; i++){
         
         person = create_person();
+#if 0
+        if(i == 0)      person.type = 'A';
+        else            person.type = 'B';
+#endif
 
         //set parameters for execve
         person_params(person);
@@ -163,10 +175,16 @@ int main(void)
 			errExit("releaseSem sem_init_people2");
 	}
 
+
     //shut system down after N seconds
 	alarm(SIM_TIME); //30 seconds
 
-    pause();
+
+    for(;;){
+        sleep(BIRTH_DEATH);
+        printf("SBAM!!\n");
+    }
+
 
     return EXIT_SUCCESS;
 }
