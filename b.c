@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
 		errExit("B reserveSem sem_init_people2 child process");
 	
 
-    printf("%c name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
-        myself.type, myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
+    printf("%c:%d name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
+        myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
     
 
     while(engaged != 0){
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         engaged = response.mtxt.key_of_love;//exit while or loop again
     }
 
-    printf("B %d engaged and paused\n", (int)getpid());
+    printf("B:%d engaged and paused\n", (int)getpid());
 
         
     pause();
@@ -107,7 +107,8 @@ int main(int argc, char* argv[])
  */
 void print_rcvd_msg(struct mymsg msg)
 {
-    printf("B received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+    printf("B:%d received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+        (int)getpid(),
         msg.mtype,
         (int)msg.mtxt.pid,
         msg.mtxt.type,
@@ -123,7 +124,8 @@ void print_rcvd_msg(struct mymsg msg)
  */
 void print_sent_msg(struct mymsg msg)
 {
-    printf("B sent mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d]\n",
+    printf("B:%d sent mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d]\n",
+        (int)getpid(),
         msg.mtype,
         (int)msg.mtxt.pid,
         msg.mtxt.type,

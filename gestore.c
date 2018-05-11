@@ -14,7 +14,7 @@
 #include "header.h"
 
 #ifndef MAX_PEOPLE
-#define MAX_PEOPLE 50
+#define MAX_PEOPLE 5
 #endif
 
 #define SIZE_NUMBER 15
@@ -52,6 +52,8 @@ pid_t * initial_children;//will contain pids of every child
 struct mymsg msg;
 struct sigaction sa;
 sigset_t my_mask;
+pid_t pidB;
+unsigned long genomeA = 0, genomeB = 0;
 
 //int main(int argc, char * argv[])
 int main(void)
@@ -190,6 +192,8 @@ int main(void)
         printf("Gestore is reading messages\n");
         do{
             flag = 0;
+            //read the first message (info of A)
+            //and wait for the second message with info of B
             if( msgrcv(msgq_a, &msg, sizeof(msg), ((long)OFFSET+getpid()), (int)IPC_NOWAIT) == -1){
                 if( errno != ENOMSG ){
                     perror("Gestore can't receive any message");
@@ -198,8 +202,23 @@ int main(void)
                 else 
                     flag = -1;
             }
-            if(flag == 0)
+            //flag untouched, first message received
+            if(flag == 0){
+                
+                pidB = msg.mtxt.partner;
+                genomeA = msg.mtxt.genome;
+                
                 print_rcvd_msg(msg);
+                
+                //read second message
+                if( msgrcv(msgq_a, &msg, sizeof(msg), (long)OFFSET+pidB, 0) == -1 )
+                    perror("gestore can't receive any message");
+                
+                genomeB = msg.mtxt.genome;
+                
+                print_rcvd_msg(msg);
+            }
+                
         }while(flag == 0);
     }
 
