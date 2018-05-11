@@ -88,8 +88,12 @@ int main(int argc, char* argv[])
 
 
         //read love_letter from B
-        if( msgrcv(love_msg_queue, &love_letter, sizeof(love_letter), 0, 0) == -1 )
-            errExit("A msgrcv love_letter from B");
+        if( msgrcv(love_msg_queue, &love_letter, sizeof(love_letter), 0, 0) == -1 ){
+            if(errno == EINTR) //EINTR: caught a signal while waiting
+                exit(EXIT_SUCCESS); //terminated by parent while waiting
+            else
+                errExit("A msgrcv love_letter from B");
+        }
         print_rcvd_msg(love_letter);
 
         engaged = -1;
