@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/ipc.h>
+#include <sys/msg.h>
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -32,6 +33,8 @@ void remove_all();
 void terminate_children();
 void free_all();
 void person_params(struct person);
+void print_rcvd_msg(struct mymsg msg);
+
 
 unsigned int init_people;
 char * args[8];
@@ -46,6 +49,7 @@ int sem_init_people2; //semaphore that tells init_people children to start livin
 struct msqid_ds msq; //struct associated with msg queue
 int msgq_a; //id of message queue to share info for processes of type A
 pid_t * initial_children;//will contain pids of every child
+struct mymsg msg;
 struct sigaction sa;
 sigset_t my_mask;
 
@@ -57,6 +61,7 @@ int main(void)
     time_t t;//for srand
     struct person person;
     pid_t child = 0;
+    int flag = 0;
 
     child_sem = calloc(SIZE_NUMBER, sizeof(char));
     child_sem2 = calloc(SIZE_NUMBER, sizeof(char));
@@ -182,7 +187,20 @@ int main(void)
 
     for(;;){
         sleep(BIRTH_DEATH);
-        printf("SBAM!!\n");
+        printf("Gestore is reading messages\n");
+        do{
+            flag = 0;
+            if( msgrcv(msgq_a, &msg, sizeof(msg), ((long)OFFSET+getpid()), (int)IPC_NOWAIT) == -1){
+                if( errno != ENOMSG ){
+                    perror("Gestore can't receive any message");
+                    flag = -2;
+                }
+                else 
+                    flag = -1;
+            }
+            if(flag == 0)
+                print_rcvd_msg(msg);
+        }while(flag == 0);
     }
 
 
@@ -310,4 +328,20 @@ void terminate_children()
 			}
 		}
 	}
+}
+
+
+/*
+ * print received message
+ */
+void print_rcvd_msg(struct mymsg msg)
+{
+    printf("Gestore received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+        msg.mtype,
+        (int)msg.mtxt.pid,
+        msg.mtxt.type,
+        msg.mtxt.name,
+        msg.mtxt.genome,
+        msg.mtxt.key_of_love,
+        (int)msg.mtxt.partner );
 }

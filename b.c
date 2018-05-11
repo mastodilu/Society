@@ -55,14 +55,14 @@ int main(int argc, char* argv[])
 
         //send love_letter to A
         love_letter.mtype = getpid();
-        love_letter.mtxt.pid = getpid();
+        love_letter.mtxt.pid = (int)getpid();
         love_letter.mtxt.type = 'B';
         love_letter.mtxt.name = myself.name;
         love_letter.mtxt.genome = myself.genome;
         love_letter.mtxt.key_of_love = -1;
         love_letter.mtxt.partner = 0;
         
-#if 0
+#if 1
         if( msgsnd(queue_of_love, &love_letter, sizeof(love_letter), 0) == -1 )
             errExit("B msgsnd love_letter to A");
         print_sent_msg(love_letter);
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 #endif
 
 
-        printf("B key:%d\n", queue_of_love);
+        //printf("B key:%d\n", queue_of_love);
 
 
         //receive response from A
@@ -88,12 +88,13 @@ int main(int argc, char* argv[])
             if( errno == ENOMSG )       errExit("B msgrcv response ENOMSG");
             else                        errExit("B msgrcv");
         }
-        printf("B after msgrcv\n");
         print_rcvd_msg(response);
 
 
         engaged = response.mtxt.key_of_love;//exit while or loop again
     }
+
+    printf("B %d engaged and paused\n", (int)getpid());
 
         
     pause();

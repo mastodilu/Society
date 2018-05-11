@@ -30,9 +30,11 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
-    struct mymsg welcome, love_letter;
+    struct mymsg welcome, love_letter, msg_gestore1, msg_gestore2;
     int count_refused = 0; //count refused love requests
     int engaged = -1;
+    pid_t partner_pid = -1;
+    unsigned long partner_genome = 0;
 
         
     //tell parent you're ready to live
@@ -86,14 +88,17 @@ int main(int argc, char* argv[])
 
         //accept or reject?
         if(myself.genome%love_letter.mtxt.genome == 0){
-            printf("A must accept - 1\n");
             engaged = 0;
+            partner_pid = love_letter.mtxt.pid;
+            partner_genome = love_letter.mtxt.genome;
         }else if( similar(myself.genome, love_letter.mtxt.genome) == 0 ){
-            printf("A must accept - 2\n");
             engaged = 0;
+            partner_pid = love_letter.mtxt.pid;
+            partner_genome = love_letter.mtxt.genome;
         }else if( count_refused >= 2 ){
-            printf("A must accept - 3\n");
             engaged = 0;
+            partner_pid = love_letter.mtxt.pid;
+            partner_genome = love_letter.mtxt.genome;
         }else{
             count_refused++;
             printf("A rejected %d\n", (int)love_letter.mtxt.pid);
@@ -108,11 +113,42 @@ int main(int argc, char* argv[])
         love_letter.mtxt.genome = myself.genome;
         love_letter.mtxt.partner = getpid();
         love_letter.mtxt.key_of_love = engaged; //0 means accepted
-
         if( msgsnd(love_msg_queue, &love_letter, sizeof(love_letter), 0) == -1 ){
-            if( errno == EINTR)	perror("A-love_letter to B caught a signal and failed msgsnd");
-            else     			perror("A-love_letter to B msgsnd"); 
+            if( errno == EINTR)	        perror("A-love_letter to B caught a signal and failed msgsnd");
+            else     			        perror("A-love_letter to B msgsnd"); 
             exit(EXIT_FAILURE);
+        }
+
+
+        if(engaged == 0){
+            //send gestore engagement details (2 messages)
+                //first message
+            msg_gestore1.mtype = OFFSET+getppid();
+            msg_gestore1.mtxt.pid = (int)getpid();
+            msg_gestore1.mtxt.type = 'A';
+            msg_gestore1.mtxt.name = myself.name;
+            msg_gestore1.mtxt.genome = myself.genome;
+            msg_gestore1.mtxt.key_of_love = 0;
+            msg_gestore1.mtxt.partner = partner_pid;
+            if( msgsnd(msgq, &msg_gestore1, sizeof(msg_gestore1), 0) == -1 ){
+                if(errno == EINTR)	        perror("A engagement details 1 to gestore, caught a signal and failed msgsnd");
+                else     			        perror("A engagement details 1 to gestore, msgsnd"); 
+                exit(EXIT_FAILURE);
+            }
+                //second message
+            msg_gestore2.mtype = OFFSET+getppid();
+            msg_gestore2.mtxt.pid = partner_pid;
+            msg_gestore2.mtxt.type = 'B';
+            msg_gestore2.mtxt.name = 'B';
+            msg_gestore2.mtxt.genome = partner_genome;
+            msg_gestore2.mtxt.key_of_love = 0;
+            msg_gestore2.mtxt.partner = (int)getpid();
+            if( msgsnd(msgq, &msg_gestore2, sizeof(msg_gestore2), 0) == -1 ){
+                if (errno == EINTR)	        perror("A engagement details 2 to gestore, caught a signal and failed msgsnd");
+                else     			        perror("A engagement details 2 to gestore, msgsnd"); 
+                exit(EXIT_FAILURE);
+            }
+            printf("sent 2#################\n");
         }
     }
 
