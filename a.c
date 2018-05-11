@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <math.h>
+#include <signal.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
@@ -12,6 +13,7 @@
 void print_rcvd_msg(struct mymsg msg);
 void print_sent_msg(struct mymsg msg);
 int similar(unsigned long, unsigned long);
+void handle_signal(int);
 
 struct msqid_ds msq;
 int love_msg_queue; //id of private message queue used to meet people
@@ -35,6 +37,12 @@ int main(int argc, char* argv[])
     int engaged = -1;
     pid_t partner_pid = -1;
     unsigned long partner_genome = 0;
+    struct sigaction sa;
+
+
+	//handle signals
+	sa.sa_handler = &handle_signal;
+	sigaction(SIGTERM, &sa, NULL);
 
         
     //tell parent you're ready to live
@@ -148,7 +156,6 @@ int main(int argc, char* argv[])
                 else     			        perror("A engagement details 2 to gestore, msgsnd"); 
                 exit(EXIT_FAILURE);
             }
-            printf("sent 2#################\n");
         }
     }
 
@@ -202,4 +209,26 @@ void print_sent_msg(struct mymsg msg)
         msg.mtxt.genome,
         msg.mtxt.key_of_love,
         (int)msg.mtxt.partner );
+}
+
+
+
+void handle_signal(int signum)
+{
+	switch(signum){
+
+		case SIGTERM:{
+            			
+			// delete message queue if still exists
+			if( msgctl(love_msg_queue, IPC_RMID, &msq) == -1 ){
+				perror("A rmid 2");
+			}
+
+			break;
+		}
+
+		default:{
+			printf("A default signal action");
+		}
+	}
 }

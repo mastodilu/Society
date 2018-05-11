@@ -14,7 +14,7 @@
 #include "header.h"
 
 #ifndef MAX_PEOPLE
-#define MAX_PEOPLE 5
+#define MAX_PEOPLE 50
 #endif
 
 #define SIZE_NUMBER 15
