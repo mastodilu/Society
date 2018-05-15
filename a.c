@@ -26,7 +26,9 @@ int main(int argc, char* argv[])
     
     struct person myself;
         myself.type = 'A';
-        myself.name = atoi(argv[2]);
+        //myself.name = argv[2];
+        if( sprintf(myself.name, "%s", argv[2]) < 0 )
+            errExit("A sprintf name parameter");
         myself.genome = (unsigned long)atol(argv[3]);
     int sem_init_people, sem_init_people2;//semaphores to start children
         sem_init_people = atoi(argv[4]);
@@ -54,7 +56,7 @@ int main(int argc, char* argv[])
 		errExit("B reserveSem sem_init_people2 child process");
 
 
-    printf("%c:%d name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
+    printf("%c:%d name:%s gen:%lu sem1:%d sem2:%d msgq:%d\n",
         myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
 
 
@@ -75,7 +77,9 @@ int main(int argc, char* argv[])
         welcome.mtype = (long)myself.genome;
         welcome.mtxt.pid = getpid();
         welcome.mtxt.type = 'A';
-        welcome.mtxt.name = myself.name;
+        //welcome.mtxt.name = myself.name;
+        if( sprintf(welcome.mtxt.name, "%s", myself.name) < 0 )
+            errExit("A sprintf welcome.mtxt.name");
         welcome.mtxt.genome = myself.genome;
         welcome.mtxt.key_of_love = love_msg_queue;
         welcome.mtxt.partner = -1;
@@ -121,24 +125,28 @@ int main(int argc, char* argv[])
         love_letter.mtype = getpid();
         love_letter.mtxt.pid = getpid();
         love_letter.mtxt.type = 'A';
-        love_letter.mtxt.name = myself.name;
+        //love_letter.mtxt.name = myself.name;
+        if( sprintf(love_letter.mtxt.name, "%s", myself.name) < 0 )
+            errExit("A sprintf love_letter.mtxt.name");
         love_letter.mtxt.genome = myself.genome;
         love_letter.mtxt.partner = getpid();
         love_letter.mtxt.key_of_love = engaged; //0 means accepted
         if( msgsnd(love_msg_queue, &love_letter, sizeof(love_letter), 0) == -1 ){
-            if( errno == EINTR)	        perror("A-love_letter to B caught a signal and failed msgsnd");
-            else     			        perror("A-love_letter to B msgsnd"); 
+            if( errno == EINTR)	            perror("A-love_letter to B caught a signal and failed msgsnd");
+            else     			            perror("A-love_letter to B msgsnd"); 
             exit(EXIT_FAILURE);
         }
 
 
         if(engaged == 0){
             //send gestore engagement details (2 messages)
-                //first message
+                //first message (A)
             msg_gestore1.mtype = OFFSET+getppid();
             msg_gestore1.mtxt.pid = (int)getpid();
             msg_gestore1.mtxt.type = 'A';
-            msg_gestore1.mtxt.name = myself.name;
+            //msg_gestore1.mtxt.name = myself.name;
+            if( sprintf(msg_gestore1.mtxt.name, "%s", "FIRST") < 0 )
+                errExit("A sprintf msg_gestore1.mtxt.name");
             msg_gestore1.mtxt.genome = myself.genome;
             msg_gestore1.mtxt.key_of_love = 0;
             msg_gestore1.mtxt.partner = partner_pid;
@@ -147,11 +155,13 @@ int main(int argc, char* argv[])
                 else     			        perror("A engagement details 1 to gestore, msgsnd"); 
                 exit(EXIT_FAILURE);
             }
-                //second message
+                //second message (B)
             msg_gestore2.mtype = OFFSET+partner_pid;
             msg_gestore2.mtxt.pid = partner_pid;
             msg_gestore2.mtxt.type = 'B';
-            msg_gestore2.mtxt.name = 'B';
+            //msg_gestore2.mtxt.name = "SECOND";
+            if( sprintf(msg_gestore2.mtxt.name, "%s", "SECOND") < 0 )
+                errExit("B sprintf SECOND");
             msg_gestore2.mtxt.genome = partner_genome;
             msg_gestore2.mtxt.key_of_love = 0;
             msg_gestore2.mtxt.partner = (int)getpid();
@@ -189,7 +199,7 @@ int similar(unsigned long m, unsigned long n)
  */
 void print_rcvd_msg(struct mymsg msg)
 {
-    printf("A:%d received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+    printf("A:%d received mtype:%lu pid:%d type:%c name:%s gen:%lu key<3:%d pid<3:%d\n",
         (int)getpid(),
         msg.mtype,
         (int)msg.mtxt.pid,
@@ -206,7 +216,7 @@ void print_rcvd_msg(struct mymsg msg)
  */
 void print_sent_msg(struct mymsg msg)
 {
-    printf("A:%d sent mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d]\n",
+    printf("A:%d sent mtype:%lu pid:%d type:%c name:%s gen:%lu key<3:%d pid<3:%d]\n",
         (int)getpid(),
         msg.mtype,
         (int)msg.mtxt.pid,

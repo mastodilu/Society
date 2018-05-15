@@ -30,12 +30,22 @@ struct person create_person()
     }else{
         person.type = 'A';
     }
-    
-    person.name = 65 + rand()%26;
+
+    //initial name has 3 characters
+    person.name[0] = 65 + rand()%26;
+    person.name[1] = 65 + rand()%26;
+    person.name[2] = 65 + rand()%26;
+    person.name[3] = '\0';
+
     person.genome = 2 + ((unsigned long)(rand())%(GENES+2));
 
     return person;
 }
+/*
+if( sprintf(child_sem, "%d", sem_init_people) < 0 )
+        errExit("child_sem sprintf");
+    args[4] = child_sem;
+*/
 
 
 
@@ -54,7 +64,7 @@ void errExit(char * s)
  */
 void print_person(struct person person)
 {
-    printf("type:%c name:%c genome:%lu\n",
+    printf("type:%c name:%s genome:%lu\n",
         person.type,
         person.name,
         person.genome );

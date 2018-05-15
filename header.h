@@ -17,14 +17,14 @@ union semun {
 
 struct person{
     char type;
-    int name;
+    char name[64];
     unsigned long genome;
 };
 
 struct msg_text {
     pid_t pid;
     char type;
-    int name;
+    char name[64];
     unsigned long genome;
     int key_of_love;
     pid_t partner;

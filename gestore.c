@@ -67,7 +67,7 @@ int main(void)
 
     child_sem = calloc(SIZE_NUMBER, sizeof(char));
     child_sem2 = calloc(SIZE_NUMBER, sizeof(char));
-    child_name = calloc(SIZE_NUMBER, sizeof(char));
+    child_name = calloc(64, sizeof(char));
     child_genome = calloc(SIZE_NUMBER, sizeof(char));
     child_msgq_a = calloc(SIZE_NUMBER, sizeof(char));
 
@@ -138,10 +138,9 @@ int main(void)
     for(i = 0; i < init_people; i++){
         
         person = create_person();
-#if 0
+
         if(i == 0)      person.type = 'A';
-        else            person.type = 'B';
-#endif
+        if(i == 1)      person.type = 'B';
 
         //set parameters for execve
         person_params(person);
@@ -183,11 +182,11 @@ int main(void)
 	}
 
 
-    //shut system down after N seconds
-	alarm(SIM_TIME); //30 seconds
+    //shut system down after SIM_TIME seconds
+	alarm(SIM_TIME);
 
 
-    for(;;){
+    for(i = 0; i < 100; i++){
         sleep(BIRTH_DEATH);
         printf("Gestore is reading messages\n");
         do{
@@ -202,7 +201,7 @@ int main(void)
                 else 
                     flag = -1;
             }
-            //flag untouched, first message received
+            //flag unchanged so first message received
             if(flag == 0){
                 
                 pidB = msg.mtxt.partner;
@@ -218,6 +217,8 @@ int main(void)
                 
                 print_rcvd_msg(msg);
             }
+
+            //TODO: create two children
                 
         }while(flag == 0);
     }
@@ -253,7 +254,7 @@ void person_params(struct person person)
     }
     
     //NAME
-    if( sprintf(child_name, "%d", person.name) < 0 )
+    if( sprintf(child_name, "%s", person.name) < 0 )
         errExit("child_name sprintf");
     args[2] = child_name;
     
@@ -355,7 +356,7 @@ void terminate_children()
  */
 void print_rcvd_msg(struct mymsg msg)
 {
-    printf("Gestore received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+    printf("Gestore received mtype:%lu pid:%d type:%c name:%s gen:%lu key<3:%d pid<3:%d\n",
         msg.mtype,
         (int)msg.mtxt.pid,
         msg.mtxt.type,

@@ -19,7 +19,9 @@ int main(int argc, char* argv[])
     
     struct person myself;
         myself.type = 'B';
-        myself.name = atoi(argv[2]);
+        //myself.name = argv[2];
+        if( sprintf(myself.name, "%s", argv[2]) <0 )
+            errExit("A sprintf name parameter");
         myself.genome = (unsigned long)atol(argv[3]);
     int sem_init_people, sem_init_people2;//semaphores to start children
         sem_init_people = atoi(argv[4]);
@@ -38,7 +40,7 @@ int main(int argc, char* argv[])
 		errExit("B reserveSem sem_init_people2 child process");
 	
 
-    printf("%c:%d name:%c gen:%lu sem1:%d sem2:%d msgq:%d\n",
+    printf("%c:%d name:%s gen:%lu sem1:%d sem2:%d msgq:%d\n",
         myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
     
 
@@ -57,7 +59,9 @@ int main(int argc, char* argv[])
         love_letter.mtype = getpid();
         love_letter.mtxt.pid = (int)getpid();
         love_letter.mtxt.type = 'B';
-        love_letter.mtxt.name = myself.name;
+        //love_letter.mtxt.name = myself.name;
+        if( sprintf(love_letter.mtxt.name, "%s", myself.name) < 0 )
+            errExit("B sprintf love_letter.mtxt.name");
         love_letter.mtxt.genome = myself.genome;
         love_letter.mtxt.key_of_love = -1;
         love_letter.mtxt.partner = 0;
@@ -107,7 +111,7 @@ int main(int argc, char* argv[])
  */
 void print_rcvd_msg(struct mymsg msg)
 {
-    printf("B:%d received mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d\n",
+    printf("B:%d received mtype:%lu pid:%d type:%c name:%s gen:%lu key<3:%d pid<3:%d\n",
         (int)getpid(),
         msg.mtype,
         (int)msg.mtxt.pid,
@@ -124,7 +128,7 @@ void print_rcvd_msg(struct mymsg msg)
  */
 void print_sent_msg(struct mymsg msg)
 {
-    printf("B:%d sent mtype:%lu pid:%d type:%c name:%c gen:%lu key<3:%d pid<3:%d]\n",
+    printf("B:%d sent mtype:%lu pid:%d type:%c name:%s gen:%lu key<3:%d pid<3:%d]\n",
         (int)getpid(),
         msg.mtype,
         (int)msg.mtxt.pid,
