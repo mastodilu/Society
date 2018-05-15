@@ -14,7 +14,7 @@
 #include "header.h"
 
 #ifndef MAX_PEOPLE
-#define MAX_PEOPLE 50
+#define MAX_PEOPLE 10
 #endif
 
 #define SIZE_NUMBER 15
@@ -52,8 +52,9 @@ pid_t * initial_children;//will contain pids of every child
 struct mymsg msg;
 struct sigaction sa;
 sigset_t my_mask;
-pid_t pidB;
+pid_t pidA;
 unsigned long genomeA = 0, genomeB = 0;
+char * name_A, * name_B;
 
 //int main(int argc, char * argv[])
 int main(void)
@@ -65,11 +66,16 @@ int main(void)
     pid_t child = 0;
     int flag = 0;
 
-    child_sem = calloc(SIZE_NUMBER, sizeof(char));
-    child_sem2 = calloc(SIZE_NUMBER, sizeof(char));
-    child_name = calloc(64, sizeof(char));
-    child_genome = calloc(SIZE_NUMBER, sizeof(char));
-    child_msgq_a = calloc(SIZE_NUMBER, sizeof(char));
+    child_sem = (char*)calloc(SIZE_NUMBER, sizeof(char));
+    child_sem2 = (char*)calloc(SIZE_NUMBER, sizeof(char));
+    child_name = (char*)calloc(64, sizeof(char));
+    child_genome = (char*)calloc(SIZE_NUMBER, sizeof(char));
+    child_msgq_a = (char*)calloc(SIZE_NUMBER, sizeof(char));
+    name_A = (char*)calloc(64, sizeof(char));
+    name_B = (char*)calloc(64, sizeof(char));
+
+    if(name_A == NULL)      errExit("name_A is null");
+    if(name_B == NULL)      errExit("name_B is null");
 
     //handle signals
 	sa.sa_handler = &handle_signal;
@@ -138,7 +144,6 @@ int main(void)
     for(i = 0; i < init_people; i++){
         
         person = create_person();
-
         if(i == 0)      person.type = 'A';
         if(i == 1)      person.type = 'B';
 
@@ -186,13 +191,15 @@ int main(void)
 	alarm(SIM_TIME);
 
 
-    for(i = 0; i < 100; i++){
+    for(i = 0; i < 100; i++){ //100 to avoid infinite loop
+
         sleep(BIRTH_DEATH);
+        
         printf("Gestore is reading messages\n");
         do{
             flag = 0;
-            //read the first message (info of A)
-            //and wait for the second message with info of B
+            //read the first message (info of B)
+            //and wait for the second message with info of A
             if( msgrcv(msgq_a, &msg, sizeof(msg), ((long)OFFSET+getpid()), (int)IPC_NOWAIT) == -1){
                 if( errno != ENOMSG ){
                     perror("Gestore can't receive any message");
@@ -204,16 +211,18 @@ int main(void)
             //flag unchanged so first message received
             if(flag == 0){
                 
-                pidB = msg.mtxt.partner;
-                genomeA = msg.mtxt.genome;
+                if( sprintf(name_B, "%s", msg.mtxt.name) < 0 )
+                    errExit("gestore sprintf name_B");
+                genomeB = msg.mtxt.genome;
+                pidA = msg.mtxt.partner;
                 
                 print_rcvd_msg(msg);
                 
                 //read second message
-                if( msgrcv(msgq_a, &msg, sizeof(msg), (long)OFFSET+pidB, 0) == -1 )
+                if( msgrcv(msgq_a, &msg, sizeof(msg), (long)OFFSET+pidA, 0) == -1 )
                     perror("gestore can't receive any message");
                 
-                genomeB = msg.mtxt.genome;
+                genomeA = msg.mtxt.genome;
                 
                 print_rcvd_msg(msg);
             }

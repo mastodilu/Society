@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
     
     struct person myself;
         myself.type = 'A';
-        //myself.name = argv[2];
         if( sprintf(myself.name, "%s", argv[2]) < 0 )
             errExit("A sprintf name parameter");
         myself.genome = (unsigned long)atol(argv[3]);
@@ -34,11 +33,11 @@ int main(int argc, char* argv[])
         sem_init_people = atoi(argv[4]);
         sem_init_people2 = atoi(argv[5]);
     int msgq = atoi(argv[6]);//id message queue
-    struct mymsg welcome, love_letter, msg_gestore1, msg_gestore2;
+    struct mymsg welcome, love_letter, love_letter_response;
     int count_refused = 0; //count refused love requests
     int engaged = -1;
-    pid_t partner_pid = -1;
-    unsigned long partner_genome = 0;
+    //pid_t partner_pid = -1;
+    //unsigned long partner_genome = 0;
     struct sigaction sa;
 
 
@@ -69,7 +68,7 @@ int main(int argc, char* argv[])
 		}else
 			errExit("msgget queue of love");
 	}
-    printf("A:%d <3queue:%d\n", (int)getpid(), love_msg_queue);
+    //printf("A:%d <3queue:%d\n", (int)getpid(), love_msg_queue);
 
 
     while(engaged != 0){
@@ -77,7 +76,6 @@ int main(int argc, char* argv[])
         welcome.mtype = (long)myself.genome;
         welcome.mtxt.pid = getpid();
         welcome.mtxt.type = 'A';
-        //welcome.mtxt.name = myself.name;
         if( sprintf(welcome.mtxt.name, "%s", myself.name) < 0 )
             errExit("A sprintf welcome.mtxt.name");
         welcome.mtxt.genome = myself.genome;
@@ -105,16 +103,16 @@ int main(int argc, char* argv[])
         //accept or reject?
         if(myself.genome%love_letter.mtxt.genome == 0){
             engaged = 0;
-            partner_pid = love_letter.mtxt.pid;
-            partner_genome = love_letter.mtxt.genome;
+            //partner_pid = love_letter.mtxt.pid;
+            //partner_genome = love_letter.mtxt.genome;
         }else if( similar(myself.genome, love_letter.mtxt.genome) == 0 ){
             engaged = 0;
-            partner_pid = love_letter.mtxt.pid;
-            partner_genome = love_letter.mtxt.genome;
+            //partner_pid = love_letter.mtxt.pid;
+            //partner_genome = love_letter.mtxt.genome;
         }else if( count_refused >= 2 ){
             engaged = 0;
-            partner_pid = love_letter.mtxt.pid;
-            partner_genome = love_letter.mtxt.genome;
+            //partner_pid = love_letter.mtxt.pid;
+            //partner_genome = love_letter.mtxt.genome;
         }else{
             count_refused++;
             printf("A:%d rejected %d\n", (int)getpid(), (int)love_letter.mtxt.pid);
@@ -122,56 +120,20 @@ int main(int argc, char* argv[])
 
         
         //send B a response
-        love_letter.mtype = getpid();
-        love_letter.mtxt.pid = getpid();
-        love_letter.mtxt.type = 'A';
-        //love_letter.mtxt.name = myself.name;
-        if( sprintf(love_letter.mtxt.name, "%s", myself.name) < 0 )
-            errExit("A sprintf love_letter.mtxt.name");
-        love_letter.mtxt.genome = myself.genome;
-        love_letter.mtxt.partner = getpid();
-        love_letter.mtxt.key_of_love = engaged; //0 means accepted
-        if( msgsnd(love_msg_queue, &love_letter, sizeof(love_letter), 0) == -1 ){
-            if( errno == EINTR)	            perror("A-love_letter to B caught a signal and failed msgsnd");
-            else     			            perror("A-love_letter to B msgsnd"); 
+        love_letter_response.mtype = getpid();
+        love_letter_response.mtxt.pid = getpid();
+        love_letter_response.mtxt.type = 'A';
+        if( sprintf(love_letter_response.mtxt.name, "%s", myself.name) < 0 )
+            errExit("A sprintf love_letter_response.mtxt.name");
+        love_letter_response.mtxt.genome = myself.genome;
+        love_letter_response.mtxt.partner = love_letter.mtxt.pid;
+        love_letter_response.mtxt.key_of_love = engaged; //0 means accepted
+        if( msgsnd(love_msg_queue, &love_letter_response, sizeof(love_letter), 0) == -1 ){
+            if( errno == EINTR)	            perror("A-love_letter_response to B caught a signal and failed msgsnd");
+            else     			            perror("A-love_letter_response to B msgsnd"); 
             exit(EXIT_FAILURE);
         }
-
-
-        if(engaged == 0){
-            //send gestore engagement details (2 messages)
-                //first message (A)
-            msg_gestore1.mtype = OFFSET+getppid();
-            msg_gestore1.mtxt.pid = (int)getpid();
-            msg_gestore1.mtxt.type = 'A';
-            //msg_gestore1.mtxt.name = myself.name;
-            if( sprintf(msg_gestore1.mtxt.name, "%s", "FIRST") < 0 )
-                errExit("A sprintf msg_gestore1.mtxt.name");
-            msg_gestore1.mtxt.genome = myself.genome;
-            msg_gestore1.mtxt.key_of_love = 0;
-            msg_gestore1.mtxt.partner = partner_pid;
-            if( msgsnd(msgq, &msg_gestore1, sizeof(msg_gestore1), 0) == -1 ){
-                if(errno == EINTR)	        perror("A engagement details 1 to gestore, caught a signal and failed msgsnd");
-                else     			        perror("A engagement details 1 to gestore, msgsnd"); 
-                exit(EXIT_FAILURE);
-            }
-                //second message (B)
-            msg_gestore2.mtype = OFFSET+partner_pid;
-            msg_gestore2.mtxt.pid = partner_pid;
-            msg_gestore2.mtxt.type = 'B';
-            //msg_gestore2.mtxt.name = "SECOND";
-            if( sprintf(msg_gestore2.mtxt.name, "%s", "SECOND") < 0 )
-                errExit("B sprintf SECOND");
-            msg_gestore2.mtxt.genome = partner_genome;
-            msg_gestore2.mtxt.key_of_love = 0;
-            msg_gestore2.mtxt.partner = (int)getpid();
-            if( msgsnd(msgq, &msg_gestore2, sizeof(msg_gestore2), 0) == -1 ){
-                if (errno == EINTR)	        perror("A engagement details 2 to gestore, caught a signal and failed msgsnd");
-                else     			        perror("A engagement details 2 to gestore, msgsnd"); 
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
+    }//-while
 
     pause();
     return EXIT_SUCCESS;
