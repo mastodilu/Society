@@ -10,9 +10,20 @@
  */
 unsigned int generate_first_people(unsigned int min, unsigned int max)
 {
-	if(max<=min)
+	if(max <= min)
 		return min;
-	return min + ((unsigned int)(rand()) % (max-min+1)); //return random number between min & max
+	return min + ((unsigned int)(rand()) % (max-min+1));
+}
+
+
+/*
+ * return a random unsigned long number between min and max
+ * */
+unsigned long random_ulong(unsigned long min)
+{
+    if(min == GENES)
+        return min;
+    return min + (unsigned long)rand() % ((unsigned long)GENES - min + 1);
 }
 
 
@@ -41,11 +52,17 @@ struct person create_person()
 
     return person;
 }
+
+
 /*
-if( sprintf(child_sem, "%d", sem_init_people) < 0 )
-        errExit("child_sem sprintf");
-    args[4] = child_sem;
-*/
+ * return the mcd between 2 numbers
+ * */
+unsigned long mcd(unsigned long a, unsigned long b) {
+    if (b == 0)
+        return a;  
+    else
+        return mcd(b, a % b);
+}
 
 
 

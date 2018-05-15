@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 
 
         //read love_letter from B
-        if( msgrcv(love_msg_queue, &love_letter, sizeof(love_letter), 0, 0) == -1 ){
+        if( msgrcv(love_msg_queue, &love_letter, sizeof(love_letter), getpid(), 0) == -1 ){
             if(errno == EINTR) //EINTR: caught a signal while waiting
                 exit(EXIT_SUCCESS); //terminated by parent while waiting
             else
@@ -101,26 +101,20 @@ int main(int argc, char* argv[])
         engaged = -1;
 
         //accept or reject?
-        if(myself.genome%love_letter.mtxt.genome == 0){
+        if(myself.genome%love_letter.mtxt.genome == 0)
             engaged = 0;
-            //partner_pid = love_letter.mtxt.pid;
-            //partner_genome = love_letter.mtxt.genome;
-        }else if( similar(myself.genome, love_letter.mtxt.genome) == 0 ){
+        else if( similar(myself.genome, love_letter.mtxt.genome) == 0 )
             engaged = 0;
-            //partner_pid = love_letter.mtxt.pid;
-            //partner_genome = love_letter.mtxt.genome;
-        }else if( count_refused >= 2 ){
+        else if( count_refused >= 2 )
             engaged = 0;
-            //partner_pid = love_letter.mtxt.pid;
-            //partner_genome = love_letter.mtxt.genome;
-        }else{
+        else{
             count_refused++;
-            printf("A:%d rejected %d\n", (int)getpid(), (int)love_letter.mtxt.pid);
+            printf("A:%d rejected B:%d\n", (int)getpid(), (int)love_letter.mtxt.pid);
         }
 
         
         //send B a response
-        love_letter_response.mtype = getpid();
+        love_letter_response.mtype = love_letter.mtxt.pid;
         love_letter_response.mtxt.pid = getpid();
         love_letter_response.mtxt.type = 'A';
         if( sprintf(love_letter_response.mtxt.name, "%s", myself.name) < 0 )

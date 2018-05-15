@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
     int msgq = atoi(argv[6]);//id of main message queue
     struct mymsg msg_in, love_letter, response, msg_gestore1, msg_gestore2;
     int queue_of_love, engaged = -1;
+    pid_t possible_partner;
 
     
     //tell parent you're ready to live
@@ -47,15 +48,16 @@ int main(int argc, char* argv[])
 
         //read first message from queue with mtype < OFFSET
         if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
-            errExit("msgrcv");
+            errExit("B msgrcv 1");
         print_rcvd_msg(msg_in);
 
 
         queue_of_love = msg_in.mtxt.key_of_love;
+        possible_partner = msg_in.mtxt.pid;
 
 
         //send love_letter to A
-        love_letter.mtype = getpid();
+        love_letter.mtype = possible_partner;
         love_letter.mtxt.pid = getpid();
         love_letter.mtxt.type = 'B';
         if( sprintf(love_letter.mtxt.name, "%s", myself.name) < 0 )
@@ -64,7 +66,7 @@ int main(int argc, char* argv[])
         love_letter.mtxt.key_of_love = -1;
         love_letter.mtxt.partner = 0;
 
-#if 1
+#if 0
         if( msgsnd(queue_of_love, &love_letter, sizeof(love_letter), 0) == -1 )
             errExit("B msgsnd love_letter to A");
         print_sent_msg(love_letter);
@@ -86,9 +88,9 @@ int main(int argc, char* argv[])
 
 
         //receive response from A
-        if( msgrcv(queue_of_love, &response, sizeof(response), 0, 0) < 1 ){
+        if( msgrcv(queue_of_love, &response, sizeof(response), getpid(), 0) < 1 ){
             if( errno == ENOMSG )       errExit("B msgrcv response ENOMSG");
-            else                        errExit("B msgrcv");
+            else                        errExit("B msgrcv 2");
         }
         print_rcvd_msg(response);
 

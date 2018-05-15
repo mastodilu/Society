@@ -58,6 +58,17 @@ void errExit(char *);
 unsigned int generate_first_people(unsigned int, unsigned int);
 
 
+/*
+ * return the mcd between 2 numbers
+ * */
+unsigned long mcd(unsigned long, unsigned long);
+
+
+/*
+ * return a random unsigned long number between min and max
+ * */
+unsigned long random_ulong(unsigned long);
+
 
 /*
  * handle semaphores

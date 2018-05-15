@@ -34,6 +34,7 @@ void terminate_children();
 void free_all();
 void person_params(struct person);
 void print_rcvd_msg(struct mymsg msg);
+void make_children(char*, char*, pid_t, pid_t, unsigned long, unsigned long);
 
 
 unsigned int init_people;
@@ -48,12 +49,12 @@ int sem_init_people; //semaphore that stops parent process and makes it wait for
 int sem_init_people2; //semaphore that tells init_people children to start living
 struct msqid_ds msq; //struct associated with msg queue
 int msgq_a; //id of message queue to share info for processes of type A
-pid_t * initial_children;//will contain pids of every child
-struct mymsg msg;
+pid_t * children;
+struct mymsg msg, msg2;
 struct sigaction sa;
 sigset_t my_mask;
-pid_t pidA;
-unsigned long genomeA = 0, genomeB = 0;
+pid_t pidA, pidB;
+unsigned long genomeA, genomeB;
 char * name_A, * name_B;
 
 //int main(int argc, char * argv[])
@@ -95,9 +96,9 @@ int main(void)
 #endif
     printf("init_people %d\n", init_people);
 
-    initial_children = calloc(init_people, sizeof(pid_t));
-    if(initial_children == NULL)
-        errExit("initial_children NULL");
+    children = calloc(init_people, sizeof(pid_t));
+    if(children == NULL)
+        errExit("children NULL");
 
     //create 2 semaphores to allow children to start living
 	sem_init_people = semget(IPC_PRIVATE, 1, 0666|IPC_CREAT|IPC_EXCL);
@@ -167,7 +168,7 @@ int main(void)
             }
             default:{//father
                 //add every child in the array of children
-				initial_children[i] = child;
+				children[i] = child;
                 print_person(person);
             }
         }//-switch
@@ -195,7 +196,7 @@ int main(void)
 
         sleep(BIRTH_DEATH);
         
-        printf("Gestore is reading messages\n");
+        printf("---> GESTORE is reading messages\n");
         do{
             flag = 0;
             //read the first message (info of B)
@@ -211,29 +212,146 @@ int main(void)
             //flag unchanged so first message received
             if(flag == 0){
                 
+                //PARAMETERS
                 if( sprintf(name_B, "%s", msg.mtxt.name) < 0 )
                     errExit("gestore sprintf name_B");
                 genomeB = msg.mtxt.genome;
+                pidB = msg.mtxt.pid;
                 pidA = msg.mtxt.partner;
                 
-                print_rcvd_msg(msg);
+                //print_rcvd_msg(msg);
                 
                 //read second message
                 if( msgrcv(msgq_a, &msg, sizeof(msg), (long)OFFSET+pidA, 0) == -1 )
                     perror("gestore can't receive any message");
                 
+                //PARAMETERS
+                if( sprintf(name_A, "%s", msg.mtxt.name) < 0 )
+                    errExit("gestore sprintf name_B");
                 genomeA = msg.mtxt.genome;
                 
-                print_rcvd_msg(msg);
-            }
+                //print_rcvd_msg(msg);
 
-            //TODO: create two children
+                //terminate A and B
+                if( kill(pidA, 0) == 0 ){
+                    if( kill(pidA, SIGTERM) == -1 ){
+                        perror("kill sigterm to pidA");
+                    }
+                }
+                if( kill(pidB, 0) == 0 ){
+                    if( kill(pidB, SIGTERM) == -1 ){
+                        perror("kill sigterm to pidB");
+                    }
+                }
                 
+                //create two children
+                make_children(name_A, name_B, pidA, pidB, genomeA, genomeB);
+            }    
         }while(flag == 0);
     }
 
 
     return EXIT_SUCCESS;
+}
+
+
+
+/*
+ * creates 2 children
+ * */
+void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigned long genome_A, unsigned long genome_B)
+{
+    struct person first, second;
+    unsigned long i, n = mcd(genome_A, genome_B);
+    int flag = -1;
+    unsigned int character;
+    pid_t child;
+    
+    character = (unsigned int)(65 + rand() % 26);
+
+    first.type = 'A';
+    if( sprintf(first.name, "%s%c", name_A, character) < 0 )
+        errExit("gestore sprintf first.name");
+    first.genome = random_ulong(n);
+    
+    second.type = 'B';
+    if( sprintf(second.name, "%s%c", name_B, character) < 0 )
+        errExit("gestore sprintf second.name");
+    
+    second.genome = random_ulong(n);
+
+    //set parameters of A for execve
+    person_params(first);
+
+    //create A
+    switch( child = fork() ){
+            case -1:{ errExit("fork error"); }
+
+            case 0:{
+                    if( execve(args[0], args, envs) == -1 ){
+                        perror("gestore execve");
+                    }
+                    //we're here if execve didnt't work
+                    exit(EXIT_FAILURE);
+            }
+            default:{
+                //replace pid in pids_array
+				for(i = 0; i < init_people; i++){
+                    if(children[i] == pid_A){
+                        children[i] = child;
+                        flag = 0;
+                    }
+                }
+                //if pid not found
+                if(flag == -1){
+                    printf("gestore pid_A not found");
+                    exit(EXIT_FAILURE);
+                }
+                print_person(first);
+
+                //allow child to start
+                if( releaseSem(sem_init_people2, 0) != 0 )
+			        errExit("releaseSem sem_init_people2");
+                break;
+            }
+        }//-switch
+
+    //set parameters of B for execve
+    person_params(second);
+
+    //create B
+    switch( child = fork() ){
+        case -1:{ errExit("fork error"); }
+
+        case 0:{
+                if( execve(args[0], args, envs) == -1 ){
+                    perror("gestore execve");
+                }
+                //we're here if execve didnt't work
+                exit(EXIT_FAILURE);
+        }
+        default:{
+            //replace pid in pids_array
+            flag = -1;
+            for(i = 0; i < init_people; i++){
+                if(children[i] == pid_B){
+                    children[i] = child;
+                    flag = 0;
+                }
+            }
+            if(flag == -1){
+                printf("gestore pid_B not found");
+                exit(EXIT_FAILURE);
+            }
+            print_person(second);
+
+            //allow child to start
+            if( releaseSem(sem_init_people2, 0) != 0 )
+                errExit("releaseSem sem_init_people2");
+            break;
+        }
+    }//-switch
+    printf("---> GESTORE creted 2 new children\n");
 }
 
 
@@ -351,8 +469,8 @@ void terminate_children()
 	unsigned int i = 0;
 
 	for(i = 0; i < init_people; i++){
-		if( kill(initial_children[i], 0) == 0 ){
-			if( kill(initial_children[i], SIGTERM) == -1 ){
+		if( kill(children[i], 0) == 0 ){
+			if( kill(children[i], SIGTERM) == -1 ){
 				perror("kill sigterm to child");
 			}
 		}
