@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
     struct mymsg msg_in, love_letter, response, msg_gestore1, msg_gestore2;
     int queue_of_love, engaged = -1;
     pid_t possible_partner;
+    int flag = -1, count = 0;
 
     
     //tell parent you're ready to live
@@ -45,10 +46,33 @@ int main(int argc, char* argv[])
     
 
     while(engaged != 0){
+        
+        flag = -1; //flag is 0 when the the right message is found
+        count = 0;
+        do{
+            //read first message from queue with mtype < OFFSET
+            if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
+                errExit("B msgrcv 1");
+            
+            //is this genome good enough?
+            if( (unsigned long)msg_in.mtype > (myself.genome/2) )
+                flag = 0; //found
+            else{
+                count++;
+                if(count < 10){
+                    //printf("B:%d too low genome: %ld, looking for other people\n", (int)getpid(), msg_in.mtype);
+                    if( msgsnd(msgq, &msg_in, sizeof(msg_in), 0) == -1 )
+                        errExit("B msgsnd with low genome");
+                    sleep(1);//to check again after a little delay
+                }else{
+                    //if already tried too many times keep it
+                    flag = 0;
+                }
+                
+            }    
+            
+        }while( flag != 0); //flag = 0 means found
 
-        //read first message from queue with mtype < OFFSET
-        if( msgrcv(msgq, &msg_in, sizeof(msg_in), -OFFSET, 0) < 1 )
-            errExit("B msgrcv 1");
         print_rcvd_msg(msg_in);
 
 

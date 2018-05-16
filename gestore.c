@@ -14,7 +14,7 @@
 #include "header.h"
 
 #ifndef MAX_PEOPLE
-#define MAX_PEOPLE 10
+#define MAX_PEOPLE 50
 #endif
 
 #define SIZE_NUMBER 15
@@ -35,9 +35,10 @@ void free_all();
 void person_params(struct person);
 void print_rcvd_msg(struct mymsg msg);
 void make_children(char*, char*, pid_t, pid_t, unsigned long, unsigned long);
+void print_stats();
 
 
-unsigned int init_people;
+unsigned int init_people, count_A = 0, count_B = 0;
 char * args[8];
 char * envs[] = {NULL};
 char * child_name;
@@ -57,6 +58,7 @@ pid_t pidA, pidB;
 unsigned long genomeA, genomeB;
 char * name_A, * name_B;
 
+
 //int main(int argc, char * argv[])
 int main(void)
 {
@@ -66,6 +68,8 @@ int main(void)
     struct person person;
     pid_t child = 0;
     int flag = 0;
+    //count_A = 0;
+    //count_B = 0;
 
     child_sem = (char*)calloc(SIZE_NUMBER, sizeof(char));
     child_sem2 = (char*)calloc(SIZE_NUMBER, sizeof(char));
@@ -147,6 +151,11 @@ int main(void)
         person = create_person();
         if(i == 0)      person.type = 'A';
         if(i == 1)      person.type = 'B';
+
+        if(person.type == 'A')
+            count_A++;
+        else
+            count_B++;
 
         //set parameters for execve
         person_params(person);
@@ -246,6 +255,7 @@ int main(void)
                 
                 //create two children
                 make_children(name_A, name_B, pidA, pidB, genomeA, genomeB);
+                print_stats();
             }    
         }while(flag == 0);
     }
@@ -352,6 +362,16 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
         }
     }//-switch
     printf("---> GESTORE creted 2 new children\n");
+
+    if(first.type == 'A')
+        count_A++;
+    else
+        count_B++;
+    
+    if(second.type == 'A')
+        count_A++;
+    else
+        count_B++;
 }
 
 
@@ -421,10 +441,9 @@ void handle_signal(int signum)
             terminate_children();
             remove_all();
 			free_all();
-			//TODO print_stats();
+			print_stats();
 			
             exit(EXIT_SUCCESS);
-            break;
         }
 
         default:{
@@ -491,4 +510,11 @@ void print_rcvd_msg(struct mymsg msg)
         msg.mtxt.genome,
         msg.mtxt.key_of_love,
         (int)msg.mtxt.partner );
+}
+
+
+
+void print_stats()
+{
+    printf("\n---> count A:%u, count B:%u\n", count_A, count_B);
 }
