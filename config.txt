@@ -1,0 +1,3 @@
+max_people 50
+sim_time 20
+birth_death 5

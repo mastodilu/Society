@@ -13,19 +13,7 @@
 
 #include "header.h"
 
-#ifndef MAX_PEOPLE
-#define MAX_PEOPLE 50
-#endif
-
 #define SIZE_NUMBER 15
-
-#ifndef SIM_TIME
-#define SIM_TIME 20
-#endif
-
-#ifndef BIRTH_DEATH
-#define BIRTH_DEATH 5
-#endif
 
 
 void handle_signal(int);
@@ -38,7 +26,7 @@ void make_children(char*, char*, pid_t, pid_t, unsigned long, unsigned long);
 void print_stats();
 
 
-unsigned int init_people, count_A = 0, count_B = 0;
+unsigned int init_people = 0, count_A = 0, count_B = 0;
 char * args[8];
 char * envs[] = {NULL};
 char * child_name;
@@ -46,6 +34,7 @@ char * child_genome;
 char * child_sem; //contain name of semaphore 1
 char * child_sem2;//contain name of semaphore 2
 char * child_msgq_a; //contain name of message queue
+char * temp_string;
 int sem_init_people; //semaphore that stops parent process and makes it wait for init_people children
 int sem_init_people2; //semaphore that tells init_people children to start living
 struct msqid_ds msq; //struct associated with msg queue
@@ -57,19 +46,18 @@ sigset_t my_mask;
 pid_t pidA, pidB;
 unsigned long genomeA, genomeB;
 char * name_A, * name_B;
+FILE * my_file;
+unsigned int max_people = 0, sim_time = 0, birth_death = 0;
 
 
 //int main(int argc, char * argv[])
 int main(void)
 {
     unsigned int i = 0;
-    init_people = 0;
     time_t t;//for srand
     struct person person;
     pid_t child = 0;
     int flag = 0;
-    //count_A = 0;
-    //count_B = 0;
 
     child_sem = (char*)calloc(SIZE_NUMBER, sizeof(char));
     child_sem2 = (char*)calloc(SIZE_NUMBER, sizeof(char));
@@ -78,9 +66,32 @@ int main(void)
     child_msgq_a = (char*)calloc(SIZE_NUMBER, sizeof(char));
     name_A = (char*)calloc(64, sizeof(char));
     name_B = (char*)calloc(64, sizeof(char));
+    temp_string = (char*)calloc(64, sizeof(char));
+
+    
 
     if(name_A == NULL)      errExit("name_A is null");
     if(name_B == NULL)      errExit("name_B is null");
+    if(temp_string == NULL) errExit("temp_string is null");
+
+    
+    //read parameters from file
+    my_file = fopen("config.txt", "r");
+    if(my_file == NULL)
+        errExit("gestore fopen");
+    
+    if( fscanf(my_file, "%s %u", temp_string, &max_people) < 0 )
+        errExit("fscanf max_people");
+    if( fscanf(my_file, "%s %u", temp_string, &sim_time) < 0 )
+        errExit("fscanf sim_time");
+    if( fscanf(my_file, "%s %u", temp_string, &birth_death) < 0 )
+        errExit("fscanf birth_death");
+
+    if(max_people < 2)
+        max_people = 2;
+    
+    printf("max_people:%u sim_time:%u birth_death:%u\n", max_people, sim_time, birth_death);
+    
 
     //handle signals
 	sa.sa_handler = &handle_signal;
@@ -94,7 +105,7 @@ int main(void)
 
     //assign a value to init_people
 #if 1
-	init_people = generate_first_people((unsigned int)2, (unsigned int)MAX_PEOPLE);
+	init_people = generate_first_people((unsigned int)2, max_people);
 #else
     init_people = 2;
 #endif
@@ -197,13 +208,13 @@ int main(void)
 	}
 
 
-    //shut system down after SIM_TIME seconds
-	alarm(SIM_TIME);
+    //shut system down after sim_time seconds
+	alarm(sim_time);
 
 
     for(i = 0; i < 100; i++){ //100 to avoid infinite loop
 
-        sleep(BIRTH_DEATH);
+        sleep(birth_death);
         
         printf("---> GESTORE is reading messages\n");
         do{
