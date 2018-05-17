@@ -24,6 +24,8 @@ void person_params(struct person);
 void print_rcvd_msg(struct mymsg msg);
 void make_children(char*, char*, pid_t, pid_t, unsigned long, unsigned long);
 void print_stats();
+void print_newborn(struct person);
+struct person create_person();
 
 
 unsigned int init_people = 0, count_A = 0, count_B = 0;
@@ -35,6 +37,7 @@ char * child_sem; //contain name of semaphore 1
 char * child_sem2;//contain name of semaphore 2
 char * child_msgq_a; //contain name of message queue
 char * temp_string;
+char * longest_name;
 int sem_init_people; //semaphore that stops parent process and makes it wait for init_people children
 int sem_init_people2; //semaphore that tells init_people children to start living
 struct msqid_ds msq; //struct associated with msg queue
@@ -44,7 +47,7 @@ struct mymsg msg, msg2;
 struct sigaction sa;
 sigset_t my_mask;
 pid_t pidA, pidB;
-unsigned long genomeA, genomeB;
+unsigned long genomeA = 0, genomeB = 0, average_genome = 0;
 char * name_A, * name_B;
 FILE * my_file;
 unsigned int max_people = 0, sim_time = 0, birth_death = 0;
@@ -67,12 +70,14 @@ int main(void)
     name_A = (char*)calloc(64, sizeof(char));
     name_B = (char*)calloc(64, sizeof(char));
     temp_string = (char*)calloc(64, sizeof(char));
+    longest_name = (char*)calloc(64, sizeof(char));
 
     
+    if(name_A == NULL)          errExit("name_A is null");
+    if(name_B == NULL)          errExit("name_B is null");
+    if(temp_string == NULL)     errExit("temp_string is null");
+    if(longest_name == NULL)    errExit("longest_name is null");
 
-    if(name_A == NULL)      errExit("name_A is null");
-    if(name_B == NULL)      errExit("name_B is null");
-    if(temp_string == NULL) errExit("temp_string is null");
 
     
     //read parameters from file
@@ -109,7 +114,7 @@ int main(void)
 #else
     init_people = 2;
 #endif
-    printf("init_people %d\n", init_people);
+    printf("init_people:%d\n", init_people);
 
     children = calloc(init_people, sizeof(pid_t));
     if(children == NULL)
@@ -174,7 +179,7 @@ int main(void)
         switch( child = fork() ){
             
             case -1:{
-                errExit("fork error");
+                errExit("fork");
             }
 
             case 0:{//child
@@ -189,7 +194,7 @@ int main(void)
             default:{//father
                 //add every child in the array of children
 				children[i] = child;
-                print_person(person);
+                print_newborn(person);
             }
         }//-switch
     }//-for
@@ -216,7 +221,7 @@ int main(void)
 
         sleep(birth_death);
         
-        printf("---> GESTORE is reading messages\n");
+        //printf("---> GESTORE is reading messages\n");
         do{
             flag = 0;
             //read the first message (info of B)
@@ -328,7 +333,7 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
                     printf("gestore pid_A not found");
                     exit(EXIT_FAILURE);
                 }
-                print_person(first);
+                print_newborn(first);
 
                 //allow child to start
                 if( releaseSem(sem_init_people2, 0) != 0 )
@@ -364,7 +369,7 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
                 printf("gestore pid_B not found");
                 exit(EXIT_FAILURE);
             }
-            print_person(second);
+            print_newborn(second);
 
             //allow child to start
             if( releaseSem(sem_init_people2, 0) != 0 )
@@ -435,6 +440,11 @@ void person_params(struct person person)
     if( sprintf(child_msgq_a, "%d", msgq_a) < 0 )
         errExit("child_msgq_a sprintf");
     args[6] = child_msgq_a;
+    
+    
+    //update longest name
+    if( sprintf(longest_name, "%s", person.name) < 0 )
+        errExit("sprintf longest_name");
 
     //args[7] = "\0";
 }
@@ -477,6 +487,9 @@ void remove_all()
 
 	if( semctl(sem_init_people2, 0, IPC_RMID, NULL) == -1 )
 		perror("remove sem_init_people2");
+
+    if( fclose(my_file) != 0 )
+        perror("gestore fclose");
 }
 
 
@@ -488,6 +501,7 @@ void free_all()
     free(child_sem);
     free(child_sem2);
     free(child_msgq_a);
+    free(temp_string);
 }
 
 
@@ -527,5 +541,43 @@ void print_rcvd_msg(struct mymsg msg)
 
 void print_stats()
 {
-    printf("\n---> count A:%u, count B:%u\n", count_A, count_B);
+    printf("---> count A:%u, count B:%u, longest_name:%s, average_genome:%lu\n", count_A, count_B, longest_name, average_genome/(count_A+count_B));
+}
+
+
+/*
+ * print newborn person struct
+ */
+void print_newborn(struct person person)
+{
+    printf("+ newborn type:%c name:%s genome:%lu\n",
+        person.type,
+        person.name,
+        person.genome );
+}
+
+
+/*
+ * create a new struct person
+ */
+struct person create_person()
+{
+    struct person person;
+
+    if(rand()%2 == 0){
+        person.type = 'B';
+    }else{
+        person.type = 'A';
+    }
+
+    //initial name has 3 characters
+    person.name[0] = 65 + rand()%26;
+    person.name[1] = 65 + rand()%26;
+    person.name[2] = 65 + rand()%26;
+    person.name[3] = '\0';
+
+    person.genome = 2 + ((unsigned long)(rand())%(GENES+2));
+    average_genome += person.genome;
+
+    return person;
 }

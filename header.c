@@ -27,33 +27,6 @@ unsigned long random_ulong(unsigned long min)
 }
 
 
-
-
-/*
- * initialize a new struct person
- */
-struct person create_person()
-{
-    struct person person;
-
-    if(rand()%2 == 0){
-        person.type = 'B';
-    }else{
-        person.type = 'A';
-    }
-
-    //initial name has 3 characters
-    person.name[0] = 65 + rand()%26;
-    person.name[1] = 65 + rand()%26;
-    person.name[2] = 65 + rand()%26;
-    person.name[3] = '\0';
-
-    person.genome = 2 + ((unsigned long)(rand())%(GENES+2));
-
-    return person;
-}
-
-
 /*
  * return the mcd between 2 numbers
  * */

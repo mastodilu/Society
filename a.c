@@ -55,9 +55,10 @@ int main(int argc, char* argv[])
 		errExit("B reserveSem sem_init_people2 child process");
 
 
-    printf("%c:%d name:%s gen:%lu sem1:%d sem2:%d msgq:%d\n",
-        myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
-
+    //printf("%c:%d name:%s gen:%lu sem1:%d sem2:%d msgq:%d\n",
+    //    myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
+    printf("HELLO %c:%d name:%s gen:%lu\n",
+        myself.type, (int)getpid(), myself.name, myself.genome);
 
     //create personal message queue of love
 	love_msg_queue = msgget(IPC_PRIVATE, 0666|IPC_CREAT|IPC_EXCL);
@@ -96,7 +97,7 @@ int main(int argc, char* argv[])
             else
                 errExit("A msgrcv love_letter from B");
         }
-        print_rcvd_msg(love_letter);
+        //print_rcvd_msg(love_letter);
 
         engaged = -1;
 

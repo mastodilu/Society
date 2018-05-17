@@ -41,9 +41,9 @@ int main(int argc, char* argv[])
 		errExit("B reserveSem sem_init_people2 child process");
 	
 
-    printf("%c:%d name:%s gen:%lu sem1:%d sem2:%d msgq:%d\n",
-        myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
-    
+    //printf("%c:%d name:%s gen:%lu sem1:%d sem2:%d msgq:%d\n",
+    //    myself.type, (int)getpid(), myself.name, myself.genome, sem_init_people, sem_init_people2, msgq );
+    printf("HELLO %c:%d name:%s gen:%lu\n", myself.type, (int)getpid(), myself.name, myself.genome);
 
     while(engaged != 0){
         
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
             
         }while( flag != 0); //flag = 0 means found
 
-        print_rcvd_msg(msg_in);
+        //print_rcvd_msg(msg_in);
 
 
         queue_of_love = msg_in.mtxt.key_of_love;
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
             else if(errno == EINVAL)    printf("B msgsnd EINVAL id:%d\n", queue_of_love);
             else if(errno == ENOMEM)    printf("B msgsnd ENOMEN\n");
         }
-        print_sent_msg(love_letter);
+        //print_sent_msg(love_letter);
 #endif
 
 
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
             if( errno == ENOMSG )       errExit("B msgrcv response ENOMSG");
             else                        errExit("B msgrcv 2");
         }
-        print_rcvd_msg(response);
+        //print_rcvd_msg(response);
 
 
         engaged = response.mtxt.key_of_love;//exit while or loop again
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("B:%d engaged and paused with A:%d\n", (int)getpid(), (int)response.mtxt.pid);
+    printf("B:%d engaged with A:%d\n", (int)getpid(), (int)response.mtxt.pid);
 
         
     pause();

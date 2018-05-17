@@ -36,10 +36,6 @@ struct mymsg {
 };
 
 
-/*
- * initialize a new struct person
- */
-struct person create_person();
 
 /*
  * print person struct
