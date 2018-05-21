@@ -4,6 +4,7 @@
 #include <time.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/sem.h>
@@ -23,11 +24,10 @@ void free_all();
 void person_params(struct person);
 void print_rcvd_msg(struct mymsg msg);
 void make_children(char*, char*, pid_t, pid_t, unsigned long, unsigned long);
-void print_stats();
 void print_newborn(struct person);
 struct person create_person();
 void update_world_record(struct person);
-void print_longest_name(); 
+void print_world_records(); 
 
 
 unsigned int init_people = 0, count_A = 0, count_B = 0;
@@ -47,7 +47,7 @@ int msgq_a;
 pid_t * children;
 struct mymsg msg, msg2;
 struct sigaction sa;
-struct person long_name, high_genome;
+struct person long_name, big_genome;
 sigset_t my_mask;
 pid_t pidA, pidB;
 unsigned long genomeA = 0, genomeB = 0, average_genome = 0;
@@ -80,6 +80,13 @@ int main(void)
     if(name_B == NULL)          errExit("name_B is null");
     if(temp_string == NULL)     errExit("temp_string is null");
     if(longest_name == NULL)    errExit("longest_name is null");
+
+
+    big_genome.type = 'C';
+    big_genome.genome = (unsigned long)0;
+    if( sprintf(big_genome.name, "%s", "zz") < 0 )
+        errExit("sprintf big_genome name");
+    
 
 
     
@@ -287,7 +294,6 @@ int main(void)
                 
                 //create two children
                 make_children(name_A, name_B, pidA, pidB, genomeA, genomeB);
-                print_stats();
             }    
         }while(flag == 0);
     }
@@ -479,8 +485,7 @@ void handle_signal(int signum)
             terminate_children();
             remove_all();
 			free_all();
-			print_stats();
-            print_longest_name();
+            print_world_records();
 			
             exit(EXIT_SUCCESS);
         }
@@ -557,14 +562,12 @@ void print_rcvd_msg(struct mymsg msg)
 
 
 
-void print_stats()
+void print_world_records()
 {
-    printf("---> count A:%u, count B:%u, average_genome:%lu\n", count_A, count_B, average_genome/(count_A+count_B));
-}
-
-void print_longest_name()
-{
-    printf("---> the person with the longest name: %c:%s %lu", long_name.type, long_name.name, long_name.genome);
+    printf("\n\nGUINNES WORLD RECORDS\n\n");
+    printf("Count A:%u, count B:%u, average_genome:%lu\n", count_A, count_B, average_genome/(count_A+count_B));
+    printf("The person with the longest name: %c:%s genome:%lu\n", long_name.type, long_name.name, long_name.genome);
+    printf("The person with the most big genome: %c:%s genome:%lu\n", big_genome.type, big_genome.name, big_genome.genome);
 }
 
 
@@ -609,14 +612,24 @@ struct person create_person()
 
 
 /*
- * update the person with the longest name
+ * update the person with the longest name and the person with the most big genome
  * */
 void update_world_record(struct person p)
 {
-    long_name.type = p.type;
+    //update longest name
+    if(strlen(p.name) > strlen(long_name.name)){
+        long_name.type = p.type;
+        if( sprintf(long_name.name, "%s", p.name) < 0 )
+            errExit("long_name name sprintf");
+        long_name.genome = p.genome;
+    }
 
-    if( sprintf(long_name.name, "%s", p.name) < 0 )
-        errExit("long_name name sprintf");
+    //update most big genome
+    if(p.genome > big_genome.genome){
+        big_genome.genome = p.genome;
+        big_genome.type = p.type;
+        if( sprintf(big_genome.name, "%s", p.name) < 0 )
+            errExit("big_genome name sprintf");
+    }
     
-    long_name.genome = p.genome;
 }
