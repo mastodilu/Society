@@ -26,6 +26,8 @@ void make_children(char*, char*, pid_t, pid_t, unsigned long, unsigned long);
 void print_stats();
 void print_newborn(struct person);
 struct person create_person();
+void update_world_record(struct person);
+void print_longest_name(); 
 
 
 unsigned int init_people = 0, count_A = 0, count_B = 0;
@@ -33,18 +35,19 @@ char * args[8];
 char * envs[] = {NULL};
 char * child_name;
 char * child_genome;
-char * child_sem; //contain name of semaphore 1
-char * child_sem2;//contain name of semaphore 2
-char * child_msgq_a; //contain name of message queue
+char * child_sem;
+char * child_sem2;
+char * child_msgq_a;
 char * temp_string;
 char * longest_name;
-int sem_init_people; //semaphore that stops parent process and makes it wait for init_people children
-int sem_init_people2; //semaphore that tells init_people children to start living
-struct msqid_ds msq; //struct associated with msg queue
-int msgq_a; //id of message queue to share info for processes of type A
+int sem_init_people;
+int sem_init_people2;
+struct msqid_ds msq;
+int msgq_a;
 pid_t * children;
 struct mymsg msg, msg2;
 struct sigaction sa;
+struct person long_name, high_genome;
 sigset_t my_mask;
 pid_t pidA, pidB;
 unsigned long genomeA = 0, genomeB = 0, average_genome = 0;
@@ -207,6 +210,7 @@ int main(void)
                 //add every child in the array of children
 				children[i] = child;
                 print_newborn(person);
+                update_world_record(person);
             }
         }//-switch
     }//-for
@@ -315,8 +319,9 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
     second.type = 'B';
     if( sprintf(second.name, "%s%c", name_B, character) < 0 )
         errExit("gestore sprintf second.name");
-    
     second.genome = random_ulong(n);
+
+    update_world_record(second);
 
     //set parameters of A for execve
     person_params(first);
@@ -475,6 +480,7 @@ void handle_signal(int signum)
             remove_all();
 			free_all();
 			print_stats();
+            print_longest_name();
 			
             exit(EXIT_SUCCESS);
         }
@@ -553,7 +559,12 @@ void print_rcvd_msg(struct mymsg msg)
 
 void print_stats()
 {
-    printf("---> count A:%u, count B:%u, longest_name:%s, average_genome:%lu\n", count_A, count_B, longest_name, average_genome/(count_A+count_B));
+    printf("---> count A:%u, count B:%u, average_genome:%lu\n", count_A, count_B, average_genome/(count_A+count_B));
+}
+
+void print_longest_name()
+{
+    printf("---> the person with the longest name: %c:%s %lu", long_name.type, long_name.name, long_name.genome);
 }
 
 
@@ -592,4 +603,20 @@ struct person create_person()
     average_genome += person.genome;
 
     return person;
+}
+
+
+
+
+/*
+ * update the person with the longest name
+ * */
+void update_world_record(struct person p)
+{
+    long_name.type = p.type;
+
+    if( sprintf(long_name.name, "%s", p.name) < 0 )
+        errExit("long_name name sprintf");
+    
+    long_name.genome = p.genome;
 }
