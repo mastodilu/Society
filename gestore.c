@@ -139,6 +139,18 @@ int main(void)
 			errExit("semget sem_init_people2");
 	}
 
+    //initialize sem_init_people to 0 (reserved)
+	if( initSemInUse(sem_init_people, 0) == -1 ){
+		perror("initSemInUse for sem_init_people");
+		exit(EXIT_FAILURE);
+	}
+
+	//initialize sem_init_people2 to 0 (reserved)
+	if( initSemInUse(sem_init_people2, 0) == -1 ){
+		perror("initSemInUse for sem_init_people");
+		exit(EXIT_FAILURE);
+	}
+
     printf("sem1:%d sem2:%d\n", sem_init_people, sem_init_people2);
 
     //create message queue
