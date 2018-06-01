@@ -117,6 +117,7 @@ int main(int argc, char* argv[])
         //send B a response
         love_letter_response.mtype = love_letter.mtxt.pid;
         love_letter_response.mtxt.pid = getpid();
+        
         love_letter_response.mtxt.type = 'A';
         if( sprintf(love_letter_response.mtxt.name, "%s", myself.name) < 0 )
             errExit("A sprintf love_letter_response.mtxt.name");

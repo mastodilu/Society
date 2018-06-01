@@ -7,6 +7,7 @@
 #define OFFSET 1000000
 #define GENES 1000000
 
+#define SLEEP sleep(1);
 
 union semun {
     int val;

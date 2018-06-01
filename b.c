@@ -125,6 +125,7 @@ int main(int argc, char* argv[])
     //here if B is engaged with A, so tell gestore you're engaged
     
     //message with info of A
+    
     msg_gestore2.mtype = response.mtxt.pid + OFFSET; //pid_A + OFFSET
     msg_gestore2.mtxt.pid = response.mtxt.pid;
     msg_gestore2.mtxt.type = 'A';

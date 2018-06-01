@@ -102,8 +102,11 @@ int main(void)
     if( fscanf(my_file, "%s %u", temp_string, &birth_death) < 0 )
         errExit("fscanf birth_death");
 
-    if(max_people < 2)
-        max_people = 2;
+    if(max_people < 2)              max_people = 2;
+    if(max_people > 100)            max_people = 100;
+    if(birth_death < 1)             birth_death = 1;
+    if(birth_death > 10)            birth_death = 10;
+    if(sim_time < birth_death)      sim_time = 2*birth_death;
     
     printf("max_people:%u sim_time:%u birth_death:%u\n", max_people, sim_time, birth_death);
     
@@ -205,6 +208,7 @@ int main(void)
             }
 
             case 0:{//child
+            
                     if( execve(args[0], args, envs) == -1 ){
                         perror("gestore execve");
                     }
@@ -240,7 +244,7 @@ int main(void)
 	alarm(sim_time);
 
 
-    for(i = 0; i < 100; i++){ //100 to avoid infinite loop
+    for(i = 0; i <= sim_time/birth_death; i++){ //100 to avoid infinite loop
 
         sleep(birth_death);
         
@@ -253,6 +257,7 @@ int main(void)
                 if( errno != ENOMSG ){
                     perror("Gestore can't receive any message");
                     flag = -2;
+                    
                 }
                 else 
                     flag = -1;
@@ -318,16 +323,24 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
     character = (unsigned int)(65 + rand() % 26);
 
     first.type = 'A';
-    if( sprintf(first.name, "%s%c", name_A, character) < 0 )
-        errExit("gestore sprintf first.name");
+    if(strlen(first.name) < 63){
+        if( sprintf(first.name, "%s%c", name_A, character) < 0 )
+            errExit("gestore sprintf first.name");
+    }else{
+        if( sprintf(first.name, "%s", name_A) < 0 )
+            errExit("gestore sprintf first.name");
+    }
     first.genome = random_ulong(n);
     
     second.type = 'B';
-    if( sprintf(second.name, "%s%c", name_B, character) < 0 )
-        errExit("gestore sprintf second.name");
+    if(strlen(second.name) < 63){
+        if( sprintf(second.name, "%s%c", name_B, character) < 0 )
+            errExit("gestore sprintf second.name");
+    }else{
+        if( sprintf(second.name, "%s", name_B) < 0 )
+            errExit("gestore sprintf second.name");
+    }
     second.genome = random_ulong(n);
-
-    update_world_record(second);
 
     //set parameters of A for execve
     person_params(first);
@@ -357,6 +370,8 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
                     exit(EXIT_FAILURE);
                 }
                 print_newborn(first);
+
+                update_world_record(first);
 
                 //allow child to start
                 if( releaseSem(sem_init_people2, 0) != 0 )
@@ -392,7 +407,10 @@ void make_children(char* name_A, char* name_B, pid_t pid_A, pid_t pid_B, unsigne
                 printf("gestore pid_B not found");
                 exit(EXIT_FAILURE);
             }
+            
             print_newborn(second);
+
+            update_world_record(second);
 
             //allow child to start
             if( releaseSem(sem_init_people2, 0) != 0 )
